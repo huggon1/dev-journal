@@ -1,34 +1,20 @@
 # Project Instructions
 
-## Start Each Session
+## GitHub Workflow
 
-- Identify the active GitHub issue, pull request, branch, or requested phase before changing files.
-- If the user asks for repository changes without an issue, create or draft the issue first.
-- Convert the request into a concrete deliverable and verification target.
-- Ask only for information that blocks a correct implementation.
+- Repository changes should be tracked through GitHub issues and pull requests.
+- Each implementation branch should map to one issue and include the issue number in the branch name.
+- If a request is still exploratory, use the session to shape the issue before creating an implementation branch.
+- If a request is too broad for one branch, split or propose smaller issues before coding.
 
-## Planning Work
+## Session Handoff
 
-- Produce or update a GitHub issue with the problem, scope, acceptance criteria, and proposed branch name.
-- If the request is too broad for one implementation branch, propose smaller issue scopes before coding.
-- Keep planning output focused on decisions needed for the next implementation session.
+- End implementation sessions with a PR or with a clear reason why a PR is not ready.
+- End review or CI-fix sessions by stating what was addressed and what remains unresolved.
 
-## Implementation Work
+## Maintaining This File
 
-- Work on one issue branch at a time.
-- Name branches with the issue number and task type, such as `feature/12-short-title`, `fix/12-short-title`, or `chore/12-short-title`.
-- Keep code changes limited to the active issue.
-- Prefer existing project conventions over new patterns.
-- Run the relevant checks available in the project before handing off.
-
-## Review And CI Work
-
-- For PR review comments, inspect unresolved threads, address actionable feedback, and push fixes to the same branch.
-- For failing CI, inspect the failing check or log before changing code.
-- Report which comments or failures were addressed and which remain unresolved.
-
-## Pull Request Handoff
-
-- Open or update the PR for the active issue branch.
-- Link the PR to its issue.
-- Include the change summary, verification performed, and known risks or follow-up work.
+- Keep `AGENTS.md` short and actionable.
+- Add instructions only for project-specific behavior that agents would not reliably do by default.
+- Prefer direct commands or decision rules over background information.
+- Do not use this file for product goals, task notes, or generic engineering advice.
