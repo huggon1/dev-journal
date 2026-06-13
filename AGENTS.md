@@ -1,21 +1,34 @@
 # Project Instructions
 
-## GitHub Workflow
+## Start Each Session
 
-- Treat GitHub issues and pull requests as the source of truth for project work.
-- Before implementation, confirm the current issue or PR scope.
-- Create one development branch per issue unless the user explicitly asks otherwise.
-- Keep commits and pull requests focused on the current issue.
+- Identify the active GitHub issue, pull request, branch, or requested phase before changing files.
+- If the user asks for repository changes without an issue, create or draft the issue first.
+- Convert the request into a concrete deliverable and verification target.
+- Ask only for information that blocks a correct implementation.
 
-## Session Scope
+## Planning Work
 
-- Use one session for one issue, one branch, or one clear phase of work.
-- Simple issues may include planning, implementation, verification, and PR creation in one session.
-- Complex issues may be split across planning, implementation, review, and CI-fix sessions.
+- Produce or update a GitHub issue with the problem, scope, acceptance criteria, and proposed branch name.
+- If the request is too broad for one implementation branch, propose smaller issue scopes before coding.
+- Keep planning output focused on decisions needed for the next implementation session.
 
-## Development Expectations
+## Implementation Work
 
-- Read the repository context before changing files.
+- Work on one issue branch at a time.
+- Name branches with the issue number and task type, such as `feature/12-short-title`, `fix/12-short-title`, or `chore/12-short-title`.
+- Keep code changes limited to the active issue.
 - Prefer existing project conventions over new patterns.
-- Do not make unrelated refactors while working on an issue.
-- Before opening or updating a PR, summarize the change and run the relevant verification available for the project.
+- Run the relevant checks available in the project before handing off.
+
+## Review And CI Work
+
+- For PR review comments, inspect unresolved threads, address actionable feedback, and push fixes to the same branch.
+- For failing CI, inspect the failing check or log before changing code.
+- Report which comments or failures were addressed and which remain unresolved.
+
+## Pull Request Handoff
+
+- Open or update the PR for the active issue branch.
+- Link the PR to its issue.
+- Include the change summary, verification performed, and known risks or follow-up work.
