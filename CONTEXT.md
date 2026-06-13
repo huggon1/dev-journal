@@ -6,9 +6,9 @@ Dev Journal helps users review and understand AI-assisted development work throu
 
 Dev Journal is a review and insight dashboard for AI-assisted development work.
 
-The first milestone is a local-first Session Panel, but the product should remain open to multiple coding agents, usage analytics, token reports, heatmaps, and development context panels such as GitHub issues, pull requests, commits, CI, and local worktrees.
+The first milestone is a local-first Session Panel for Codex session review. The product may later add independent panels such as GitHub issues, pull requests, commits, CI, local worktrees, skills, prompts, or analysis reports.
 
-Codex is the first supported session source, not the long-term product boundary. Early implementation should avoid making Codex the permanent domain model.
+The MVP should support Codex session history across local platforms before introducing other data sources or product areas.
 
 ## Language
 
@@ -44,8 +44,8 @@ _Avoid_: Manual log import as the primary flow, analysis-first MVP
 The MVP reads Codex session history from the current machine and avoids sync, import/export, cloud account access, or remote history aggregation.
 _Avoid_: Cloud sync, remote dashboard, multi-device history
 
-**Codex-first Source**:
-The MVP discovers and renders local Codex session history first, while keeping the session model and source boundaries ready for other coding agents later.
+**Codex-only Source**:
+The MVP only discovers and renders local Codex session history, while supporting the local filesystem conventions needed across Windows, macOS, Linux, and WSL.
 _Avoid_: Multi-agent importers, generic chat transcript viewer
 
 **History Path Override**:
