@@ -12,6 +12,12 @@
 - End implementation sessions with a PR or with a clear reason why a PR is not ready.
 - End review or CI-fix sessions by stating what was addressed and what remains unresolved.
 
+## Git Conventions
+
+- Name branches as `<type>/<issue-number>-<short-title>`, such as `chore/5-git-conventions`.
+- Use concise conventional commit messages, such as `chore: document git conventions`.
+- Use squash merge for pull requests unless the user explicitly asks otherwise.
+
 ## Maintaining This File
 
 - Keep `AGENTS.md` short and actionable.
