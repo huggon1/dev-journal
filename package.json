@@ -7,7 +7,8 @@
     "dev": "vite",
     "build:types": "tsc -p tsconfig.build.json",
     "build": "npm run build:types && vite build",
-    "test": "npm run build:types && node --test \"dist/tests/**/*.test.js\"",
+    "start": "node build/src/server/index.js",
+    "test": "npm run build:types && node --test \"build/tests/**/*.test.js\"",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

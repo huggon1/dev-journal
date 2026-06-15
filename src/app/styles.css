@@ -37,9 +37,13 @@ button {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   padding: 24px;
   background: #eef3ee;
   border-right: 1px solid #d7ded6;
+  overflow: hidden;
 }
 
 .turn-rail {
@@ -113,6 +117,67 @@ h2 {
   color: #222622;
 }
 
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.status-message {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d3ddd3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #465048;
+  font-size: 13px;
+}
+
+.status-message.error {
+  border-color: #e2b8b8;
+  background: #fff8f8;
+  color: #7a2d2d;
+}
+
+.session-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.session-card {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #343d36;
+  text-align: left;
+}
+
+.session-card:hover,
+.session-card.active {
+  border-color: #b8cbb8;
+  background: #ffffff;
+}
+
+.session-card span,
+.session-card small {
+  color: #687168;
+  font-size: 12px;
+}
+
+.session-card strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #222622;
+  font-size: 14px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .review-panel {
   min-width: 0;
   padding: 24px 32px;
@@ -151,6 +216,12 @@ h2 {
   outline: 0;
   background: transparent;
   color: #222622;
+}
+
+.review-subtitle {
+  margin: 8px 0 0;
+  color: #657066;
+  font-size: 13px;
 }
 
 .conversation-flow {
@@ -334,8 +405,15 @@ h2 {
 
   .session-sidebar,
   .turn-rail {
+    position: static;
+    height: auto;
+    overflow: visible;
     border: 0;
     border-bottom: 1px solid #d7ded6;
+  }
+
+  .session-list {
+    max-height: 360px;
   }
 
   .review-header {
