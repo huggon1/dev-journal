@@ -4,12 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
+    "dev": "vite",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build": "npm run build:types && vite build",
+    "test": "npm run build:types && node --test \"dist/tests/**/*.test.js\"",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "typescript": "^5.9.3"
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16"
+  },
+  "dependencies": {
+    "lucide-react": "^1.18.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   }
 }
