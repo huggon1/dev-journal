@@ -1,4 +1,4 @@
-import { Bot, ChevronRight, Code2, MessageSquareText, RefreshCw, Search } from "lucide-react";
+import { Bot, ChevronRight, Code2, FolderOpen, MessageSquareText, RefreshCw, Search } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type { ExecutionDetail, PrimaryConversationItem, SessionDocument } from "../codexSession/types.js";
@@ -17,6 +17,7 @@ type SessionSummary = {
 
 type DiscoveryResponse = {
   codexHome?: string;
+  historyPath?: string;
   searchedRoots?: string[];
   sessions: SessionSummary[];
   warnings: string[];
@@ -36,7 +37,11 @@ type SearchTarget = {
 export function App() {
   const [activeAnchor, setActiveAnchor] = useState<string>();
   const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
+  const [activeHistoryPath, setActiveHistoryPath] = useState("");
+  const [codexHome, setCodexHome] = useState<string>();
+  const [historyPathInput, setHistoryPathInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchedRoots, setSearchedRoots] = useState<string[]>([]);
   const [showRaw, setShowRaw] = useState(false);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -57,21 +62,29 @@ export function App() {
   );
   const activeSearchTarget = activeSearchIndex >= 0 ? searchResults[activeSearchIndex] : undefined;
 
-  async function loadSessions() {
+  async function loadSessions(historyPath = activeHistoryPath, resetSelection = false) {
     setIsLoading(true);
     setLoadError(undefined);
     try {
-      const response = await fetch("/api/sessions");
+      const params = new URLSearchParams();
+      if (historyPath.trim()) {
+        params.set("historyPath", historyPath.trim());
+      }
+      const response = await fetch(`/api/sessions${params.size ? `?${params.toString()}` : ""}`);
       if (!response.ok) {
         throw new Error(`Discovery failed with status ${response.status}`);
       }
       const data = (await response.json()) as DiscoveryResponse;
       setSessions(data.sessions);
       setWarnings(data.warnings ?? []);
-      setSelectedSessionKey((current) => current ?? data.sessions[0]?.key);
+      setCodexHome(data.codexHome);
+      setSearchedRoots(data.searchedRoots ?? []);
+      setActiveHistoryPath(historyPath.trim());
+      setSelectedSessionKey((current) => (resetSelection ? data.sessions[0]?.key : current ?? data.sessions[0]?.key));
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Could not load sessions");
       setSessions([]);
+      setSearchedRoots([]);
     } finally {
       setIsLoading(false);
     }
@@ -87,30 +100,55 @@ export function App() {
       return;
     }
 
+    const controller = new AbortController();
+    let isCurrentRequest = true;
+
     async function loadSelectedSession(key: string) {
       setIsDetailLoading(true);
       setDetailError(undefined);
+      setSessionDocument(undefined);
+      setSearchQuery("");
+      setActiveSearchIndex(-1);
+      setActiveAnchor(undefined);
       setShowRaw(false);
       try {
-        const response = await fetch(`/api/sessions/${encodeURIComponent(key)}`);
+        const params = new URLSearchParams();
+        if (activeHistoryPath) {
+          params.set("historyPath", activeHistoryPath);
+        }
+        const response = await fetch(`/api/sessions/${encodeURIComponent(key)}${params.size ? `?${params.toString()}` : ""}`, {
+          signal: controller.signal
+        });
         if (!response.ok) {
           throw new Error(`Session load failed with status ${response.status}`);
         }
         const data = (await response.json()) as SessionDetailResponse;
+        if (!isCurrentRequest) {
+          return;
+        }
         setSessionDocument(data.document);
         setSearchQuery("");
         setActiveSearchIndex(-1);
         setActiveAnchor(data.document.userTurns[0] ? eventAnchor(data.document.userTurns[0].sourceEventIndex) : undefined);
       } catch (error) {
+        if (!isCurrentRequest || (error instanceof DOMException && error.name === "AbortError")) {
+          return;
+        }
         setSessionDocument(undefined);
         setDetailError(error instanceof Error ? error.message : "Could not load session");
       } finally {
-        setIsDetailLoading(false);
+        if (isCurrentRequest) {
+          setIsDetailLoading(false);
+        }
       }
     }
 
     void loadSelectedSession(selectedSession.key);
-  }, [selectedSession?.key]);
+    return () => {
+      isCurrentRequest = false;
+      controller.abort();
+    };
+  }, [activeHistoryPath, selectedSession?.key]);
 
   useEffect(() => {
     const firstResult = searchResults[0];
@@ -159,8 +197,54 @@ export function App() {
           {isLoading ? "Scanning..." : "Refresh sessions"}
         </button>
 
+        <form
+          className="path-override"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void loadSessions(historyPathInput, true);
+          }}
+        >
+          <label>
+            <span>History path override</span>
+            <div>
+              <FolderOpen size={16} />
+              <input
+                aria-label="History path override"
+                placeholder="Codex home or sessions folder"
+                value={historyPathInput}
+                onChange={(event) => setHistoryPathInput(event.target.value)}
+              />
+            </div>
+          </label>
+          <div className="path-actions">
+            <button type="submit" disabled={isLoading}>
+              Use path
+            </button>
+            <button
+              type="button"
+              disabled={isLoading || !activeHistoryPath}
+              onClick={() => {
+                setHistoryPathInput("");
+                void loadSessions("", true);
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        </form>
+
+        <div className="discovery-meta">
+          <span>{activeHistoryPath ? "Using override" : "Using default Codex home"}</span>
+          <strong>{activeHistoryPath || codexHome || "Unknown path"}</strong>
+          {searchedRoots.length ? <small>Searched {searchedRoots.length} root(s)</small> : null}
+        </div>
+
         {loadError ? <p className="status-message error">{loadError}</p> : null}
-        {warnings.length ? <p className="status-message">{warnings[0]}</p> : null}
+        {warnings.slice(0, 2).map((warning) => (
+          <p className="status-message" key={warning}>
+            {warning}
+          </p>
+        ))}
 
         <section className="session-list" aria-label="Discovered sessions">
           {sessions.map((session) => (
@@ -173,6 +257,7 @@ export function App() {
               <span>{session.archived ? "Archived" : "Local session"}</span>
               <strong>{session.title}</strong>
               <small>{formatDate(session.updatedAt ?? session.startedAt)}</small>
+              {session.parseWarningCount ? <small>{session.parseWarningCount} parse warning(s)</small> : null}
             </button>
           ))}
           {!isLoading && !sessions.length && !loadError ? <p className="status-message">No local Codex sessions found.</p> : null}

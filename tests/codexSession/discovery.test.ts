@@ -44,20 +44,49 @@ describe("discoverCodexSessions", () => {
         }
       })}\n`
     );
+    await writeFile(path.join(activeDir, "rollout-2026-06-15T13-00-00-partial.jsonl"), "{not-json}\n");
 
     const result = await discoverCodexSessions({ codexHome });
     const active = result.sessions.find((session) => session.id === "active-session");
     const archived = result.sessions.find((session) => session.id === "archived-session");
+    const partial = result.sessions.find((session) => session.id === "rollout-2026-06-15T13-00-00-partial");
 
-    assert.equal(result.sessions.length, 2);
+    assert.equal(result.sessions.length, 3);
     assert.equal(active?.title, "Active title");
     assert.equal(active?.archived, false);
     assert.equal(typeof active?.key, "string");
     assert.equal(archived?.archived, true);
+    assert.equal(partial?.parseWarningCount, 1);
     assert.deepEqual(result.warnings, []);
 
     const detail = await readCodexSessionByKey(active!.key, { codexHome });
     assert.equal(detail?.summary.id, "active-session");
     assert.equal(detail?.document.metadata.cwd, "/repo");
+  });
+
+  it("can discover sessions from a manual history path override", async () => {
+    const codexHome = await mkdtemp(path.join(tmpdir(), "dev-journal-codex-override-"));
+    const sessionsDir = path.join(codexHome, "sessions");
+    await mkdir(sessionsDir, { recursive: true });
+    await writeFile(
+      path.join(sessionsDir, "override-session.jsonl"),
+      `${JSON.stringify({
+        timestamp: "2026-06-15T12:00:00.000Z",
+        type: "session_meta",
+        payload: {
+          id: "override-session",
+          timestamp: "2026-06-15T12:00:00.000Z",
+          cwd: "/override",
+          source: "exec"
+        }
+      })}\n`
+    );
+
+    const result = await discoverCodexSessions({ historyPath: sessionsDir });
+
+    assert.equal(result.historyPath, path.resolve(sessionsDir));
+    assert.equal(result.searchedRoots.length, 1);
+    assert.equal(result.sessions.length, 1);
+    assert.equal(result.sessions[0]?.id, "override-session");
   });
 });

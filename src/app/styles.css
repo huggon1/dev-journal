@@ -43,7 +43,7 @@ button {
   padding: 24px;
   background: #eef3ee;
   border-right: 1px solid #d7ded6;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .turn-rail {
@@ -138,10 +138,89 @@ h2 {
   color: #7a2d2d;
 }
 
-.session-list {
+.discovery-meta {
+  display: grid;
+  gap: 3px;
+  max-height: 88px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid #d7ded6;
+  border-radius: 8px;
+  background: #f8fbf6;
+  color: #687168;
+  font-size: 12px;
+}
+
+.discovery-meta strong {
+  color: #222622;
+  font-size: 13px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.path-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.path-actions button {
+  min-height: 34px;
+  border: 1px solid #c9d3c9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #222622;
+}
+
+.path-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.path-override {
   display: grid;
   gap: 8px;
-  min-height: 0;
+}
+
+.path-override label {
+  display: grid;
+  gap: 6px;
+  color: #657066;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.path-override label div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid #d3ddd3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.path-override input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #222622;
+  font-size: 13px;
+}
+
+.session-list {
+  display: grid;
+  flex: 1;
+  flex-basis: 180px;
+  gap: 8px;
+  min-height: 140px;
+  overflow: auto;
+}
+
+.session-sidebar .status-message {
+  max-height: 72px;
   overflow: auto;
 }
 
