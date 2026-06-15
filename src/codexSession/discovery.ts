@@ -20,6 +20,7 @@ export type SessionSummary = {
 
 export type DiscoveryResult = {
   codexHome: string;
+  historyPath?: string;
   searchedRoots: string[];
   sessions: SessionSummary[];
   warnings: string[];
@@ -31,10 +32,14 @@ type SessionIndexEntry = {
   updated_at?: string;
 };
 
-export async function discoverCodexSessions(options: { codexHome?: string } = {}): Promise<DiscoveryResult> {
-  const codexHome = options.codexHome ?? getDefaultCodexHome();
+export type DiscoveryOptions = {
+  codexHome?: string;
+  historyPath?: string;
+};
+
+export async function discoverCodexSessions(options: DiscoveryOptions = {}): Promise<DiscoveryResult> {
   const warnings: string[] = [];
-  const searchedRoots = [path.join(codexHome, "sessions"), path.join(codexHome, "archived_sessions")];
+  const { codexHome, historyPath, searchedRoots } = await resolveDiscoveryRoots(options, warnings);
   const index = await readSessionIndex(path.join(codexHome, "session_index.jsonl"), warnings);
   const files = await collectSessionFiles(searchedRoots, warnings);
 
@@ -45,6 +50,7 @@ export async function discoverCodexSessions(options: { codexHome?: string } = {}
 
   return {
     codexHome,
+    historyPath,
     searchedRoots,
     sessions: sortedSessions,
     warnings
@@ -152,7 +158,7 @@ async function summarizeSessionFile(
   }
 }
 
-export async function readCodexSessionByKey(key: string, options: { codexHome?: string } = {}) {
+export async function readCodexSessionByKey(key: string, options: DiscoveryOptions = {}) {
   const discovery = await discoverCodexSessions(options);
   const summary = discovery.sessions.find((session) => session.key === key);
 
@@ -170,6 +176,52 @@ export async function readCodexSessionByKey(key: string, options: { codexHome?: 
 
 function sessionKey(filePath: string): string {
   return createHash("sha256").update(filePath).digest("base64url").slice(0, 16);
+}
+
+async function resolveDiscoveryRoots(
+  options: DiscoveryOptions,
+  warnings: string[]
+): Promise<{ codexHome: string; historyPath?: string; searchedRoots: string[] }> {
+  if (!options.historyPath?.trim()) {
+    const codexHome = options.codexHome ?? getDefaultCodexHome();
+    return {
+      codexHome,
+      searchedRoots: [path.join(codexHome, "sessions"), path.join(codexHome, "archived_sessions")]
+    };
+  }
+
+  const historyPath = path.resolve(options.historyPath.trim());
+  const baseName = path.basename(historyPath);
+  const isKnownSessionRoot = baseName === "sessions" || baseName === "archived_sessions";
+  const codexHome = isKnownSessionRoot ? path.dirname(historyPath) : historyPath;
+
+  if (isKnownSessionRoot) {
+    return { codexHome, historyPath, searchedRoots: [historyPath] };
+  }
+
+  const standardRoots = [path.join(historyPath, "sessions"), path.join(historyPath, "archived_sessions")];
+  const existingStandardRoots = await existingDirectories(standardRoots);
+  if (existingStandardRoots.length) {
+    return { codexHome, historyPath, searchedRoots: standardRoots };
+  }
+
+  warnings.push(`Using override path as a session transcript root: ${historyPath}`);
+  return { codexHome, historyPath, searchedRoots: [historyPath] };
+}
+
+async function existingDirectories(paths: string[]): Promise<string[]> {
+  const existing: string[] = [];
+  for (const candidate of paths) {
+    try {
+      const candidateStat = await stat(candidate);
+      if (candidateStat.isDirectory()) {
+        existing.push(candidate);
+      }
+    } catch {
+      // Missing roots are reported later by collectSessionFiles.
+    }
+  }
+  return existing;
 }
 
 function fallbackTitle(filePath: string, codexHome: string): string {

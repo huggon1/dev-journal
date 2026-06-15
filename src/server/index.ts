@@ -15,7 +15,7 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === "/api/sessions") {
     try {
-      const result = await discoverCodexSessions();
+      const result = await discoverCodexSessions(discoveryOptionsFromUrl(url));
       sendJson(response, 200, result);
     } catch (error) {
       sendJson(response, 500, {
@@ -29,7 +29,7 @@ const server = createServer(async (request, response) => {
   if (url.pathname.startsWith("/api/sessions/")) {
     const key = decodeURIComponent(url.pathname.replace("/api/sessions/", ""));
     try {
-      const result = await readCodexSessionByKey(key);
+      const result = await readCodexSessionByKey(key, discoveryOptionsFromUrl(url));
       if (!result) {
         sendJson(response, 404, { message: "Session not found" });
         return;
@@ -53,6 +53,11 @@ server.listen(port, "127.0.0.1", () => {
 function sendJson(response: ServerResponse, status: number, body: unknown) {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   response.end(JSON.stringify(body));
+}
+
+function discoveryOptionsFromUrl(url: URL) {
+  const historyPath = url.searchParams.get("historyPath")?.trim();
+  return historyPath ? { historyPath } : {};
 }
 
 async function serveClient(pathname: string, response: ServerResponse) {
