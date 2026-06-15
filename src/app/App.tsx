@@ -1,9 +1,10 @@
 import { Bot, ChevronRight, Code2, MessageSquareText, RefreshCw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { mockSession, type MockConversationBlock } from "./mockSession.js";
+import type { ExecutionDetail, PrimaryConversationItem, SessionDocument } from "../codexSession/types.js";
 
 type SessionSummary = {
+  key: string;
   id: string;
   title: string;
   startedAt?: string;
@@ -21,16 +22,27 @@ type DiscoveryResponse = {
   warnings: string[];
 };
 
+type SessionDetailResponse = {
+  summary: SessionSummary;
+  document: SessionDocument;
+};
+
 export function App() {
-  const [activeTurn, setActiveTurn] = useState("turn-1");
+  const [activeAnchor, setActiveAnchor] = useState<string>();
   const [showRaw, setShowRaw] = useState(false);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string>();
+  const [selectedSessionKey, setSelectedSessionKey] = useState<string>();
+  const [sessionDocument, setSessionDocument] = useState<SessionDocument>();
+  const [detailError, setDetailError] = useState<string>();
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>();
-  const userTurns = useMemo(() => mockSession.blocks.filter((block) => block.type === "user"), []);
-  const selectedSession = sessions.find((session) => session.id === selectedSessionId) ?? sessions[0];
+  const selectedSession = sessions.find((session) => session.key === selectedSessionKey) ?? sessions[0];
+  const conversationItems = sessionDocument?.primaryConversation ?? [];
+  const executionDetails = sessionDocument?.executionDetails ?? [];
+  const userTurns = sessionDocument?.userTurns ?? [];
+  const rawPreview = useMemo(() => JSON.stringify(sessionDocument?.rawEvents.slice(0, 25) ?? [], null, 2), [sessionDocument]);
 
   async function loadSessions() {
     setIsLoading(true);
@@ -43,7 +55,7 @@ export function App() {
       const data = (await response.json()) as DiscoveryResponse;
       setSessions(data.sessions);
       setWarnings(data.warnings ?? []);
-      setSelectedSessionId((current) => current ?? data.sessions[0]?.id);
+      setSelectedSessionKey((current) => current ?? data.sessions[0]?.key);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Could not load sessions");
       setSessions([]);
@@ -55,6 +67,35 @@ export function App() {
   useEffect(() => {
     void loadSessions();
   }, []);
+
+  useEffect(() => {
+    if (!selectedSession?.key) {
+      setSessionDocument(undefined);
+      return;
+    }
+
+    async function loadSelectedSession(key: string) {
+      setIsDetailLoading(true);
+      setDetailError(undefined);
+      setShowRaw(false);
+      try {
+        const response = await fetch(`/api/sessions/${encodeURIComponent(key)}`);
+        if (!response.ok) {
+          throw new Error(`Session load failed with status ${response.status}`);
+        }
+        const data = (await response.json()) as SessionDetailResponse;
+        setSessionDocument(data.document);
+        setActiveAnchor(data.document.userTurns[0] ? eventAnchor(data.document.userTurns[0].sourceEventIndex) : undefined);
+      } catch (error) {
+        setSessionDocument(undefined);
+        setDetailError(error instanceof Error ? error.message : "Could not load session");
+      } finally {
+        setIsDetailLoading(false);
+      }
+    }
+
+    void loadSelectedSession(selectedSession.key);
+  }, [selectedSession?.key]);
 
   return (
     <main className="app-shell">
@@ -76,10 +117,10 @@ export function App() {
         <section className="session-list" aria-label="Discovered sessions">
           {sessions.map((session) => (
             <button
-              className={selectedSession?.id === session.id ? "session-card active" : "session-card"}
-              key={session.id}
+              className={selectedSession?.key === session.key ? "session-card active" : "session-card"}
+              key={session.key}
               type="button"
-              onClick={() => setSelectedSessionId(session.id)}
+              onClick={() => setSelectedSessionKey(session.key)}
             >
               <span>{session.archived ? "Archived" : "Local session"}</span>
               <strong>{session.title}</strong>
@@ -94,11 +135,11 @@ export function App() {
         <header className="review-header">
           <div>
             <p className="eyebrow">Clean Review View</p>
-            <h2>{selectedSession?.title ?? mockSession.title}</h2>
+            <h2>{selectedSession?.title ?? "Session Review"}</h2>
             <p className="review-subtitle">
               {selectedSession
-                ? `${formatDate(selectedSession.updatedAt ?? selectedSession.startedAt)} · ${selectedSession.cwd ?? "Unknown workspace"}`
-                : "Mock review content shown until parsed-session integration lands."}
+                ? `${formatDate(selectedSession.updatedAt ?? selectedSession.startedAt)} - ${selectedSession.cwd ?? "Unknown workspace"}`
+                : "Select a discovered Codex session to review its parsed conversation."}
             </p>
           </div>
           <label className="search-box">
@@ -107,24 +148,46 @@ export function App() {
           </label>
         </header>
 
+        {detailError ? <p className="status-message error">{detailError}</p> : null}
+        {sessionDocument?.warnings.length ? (
+          <p className="status-message">{sessionDocument.warnings.length} parse warning(s) found in this session.</p>
+        ) : null}
+        {isDetailLoading ? <p className="status-message">Loading session detail...</p> : null}
+
         <div className="conversation-flow">
-          {mockSession.blocks.map((block) => (
-            <ConversationBlock key={block.id} block={block} isActive={activeTurn === block.id} />
+          {conversationItems.map((item) => (
+            <ParsedConversationBlock key={item.id} item={item} isActive={activeAnchor === eventAnchor(item.sourceEventIndex)} />
           ))}
+          {!isDetailLoading && selectedSession && !conversationItems.length ? (
+            <p className="status-message">No primary conversation messages were parsed for this session.</p>
+          ) : null}
+          {!isDetailLoading && !selectedSession ? <p className="status-message">No session selected.</p> : null}
         </div>
+
+        {executionDetails.length ? (
+          <section className="execution-panel" aria-label="Execution detail">
+            <p className="eyebrow">Execution Detail</p>
+            <div className="detail-stack">
+              {executionDetails.slice(0, 80).map((detail) => (
+                <ExecutionDetailBlock key={detail.id} detail={detail} />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </section>
 
       <aside className="turn-rail" aria-label="User turn navigation">
         <div className="rail-section">
           <p className="eyebrow">User Turns</p>
           <nav className="turn-list">
+            {userTurns.length ? null : <p className="status-message">No user turns parsed yet.</p>}
             {userTurns.map((turn, index) => (
               <button
-                className={activeTurn === turn.id ? "turn-link active" : "turn-link"}
+                className={activeAnchor === eventAnchor(turn.sourceEventIndex) ? "turn-link active" : "turn-link"}
                 key={turn.id}
                 type="button"
                 aria-label={`Jump to user turn ${index + 1}`}
-                onClick={() => setActiveTurn(turn.id)}
+                onClick={() => setActiveAnchor(eventAnchor(turn.sourceEventIndex))}
               >
                 <span>{index + 1}</span>
                 <p>{turn.text}</p>
@@ -138,19 +201,44 @@ export function App() {
             <Code2 size={16} />
             {showRaw ? "Hide Raw View" : "Show Raw View"}
           </button>
-          {showRaw ? <pre className="raw-preview">{mockSession.rawPreview}</pre> : null}
+          {showRaw ? <pre className="raw-preview">{rawPreview}</pre> : null}
         </div>
       </aside>
     </main>
   );
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function ParsedConversationBlock({ item, isActive }: { item: PrimaryConversationItem; isActive: boolean }) {
+  const icon = item.kind === "user" ? <MessageSquareText size={18} /> : <Bot size={18} />;
+
   return (
-    <div className="meta-row">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
+    <article className={isActive ? `conversation-block ${item.kind} active` : `conversation-block ${item.kind}`} id={item.id}>
+      <div className="message-avatar" aria-hidden="true">
+        {icon}
+      </div>
+      <div className="message-content">
+        <header className="message-header">
+          <span>{item.kind === "user" ? "User turn" : "Agent response"}</span>
+          <time>{formatDate(item.timestamp)}</time>
+        </header>
+        <p>{item.text || "(empty message)"}</p>
+      </div>
+    </article>
+  );
+}
+
+function ExecutionDetailBlock({ detail }: { detail: ExecutionDetail }) {
+  return (
+    <details className="execution-detail">
+      <summary>
+        <span>
+          <ChevronRight size={16} />
+          {detail.label}
+        </span>
+        <em>{detail.name ?? detail.relatedCallName ?? detail.type}</em>
+      </summary>
+      <pre>{JSON.stringify(detail.rawPayload, null, 2)}</pre>
+    </details>
   );
 }
 
@@ -170,37 +258,6 @@ function formatDate(value?: string): string {
   }).format(date);
 }
 
-function ConversationBlock({ block, isActive }: { block: MockConversationBlock; isActive: boolean }) {
-  const icon = block.type === "user" ? <MessageSquareText size={18} /> : <Bot size={18} />;
-
-  return (
-    <article className={isActive ? `conversation-block ${block.type} active` : `conversation-block ${block.type}`} id={block.id}>
-      <div className="message-avatar" aria-hidden="true">
-        {icon}
-      </div>
-      <div className="message-content">
-        <header className="message-header">
-          <span>{block.title}</span>
-          <time>{block.time}</time>
-        </header>
-        <p>{block.text}</p>
-        {block.type === "assistant" && block.details?.length ? (
-          <div className="detail-stack">
-            {block.details.map((detail) => (
-              <details key={detail.id} className="execution-detail">
-                <summary>
-                  <span>
-                    <ChevronRight size={16} />
-                    {detail.title}
-                  </span>
-                  <em>{detail.meta}</em>
-                </summary>
-                <p>{detail.body}</p>
-              </details>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </article>
-  );
+function eventAnchor(sourceEventIndex: number): string {
+  return `event-${sourceEventIndex}`;
 }

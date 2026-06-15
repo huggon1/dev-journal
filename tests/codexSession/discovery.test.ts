@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
-import { discoverCodexSessions } from "../../src/codexSession/discovery.js";
+import { discoverCodexSessions, readCodexSessionByKey } from "../../src/codexSession/discovery.js";
 
 describe("discoverCodexSessions", () => {
   it("discovers active and archived Codex JSONL sessions from a Codex home", async () => {
@@ -52,7 +52,12 @@ describe("discoverCodexSessions", () => {
     assert.equal(result.sessions.length, 2);
     assert.equal(active?.title, "Active title");
     assert.equal(active?.archived, false);
+    assert.equal(typeof active?.key, "string");
     assert.equal(archived?.archived, true);
     assert.deepEqual(result.warnings, []);
+
+    const detail = await readCodexSessionByKey(active!.key, { codexHome });
+    assert.equal(detail?.summary.id, "active-session");
+    assert.equal(detail?.document.metadata.cwd, "/repo");
   });
 });
