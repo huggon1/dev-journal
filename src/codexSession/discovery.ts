@@ -1,10 +1,12 @@
 import { readdir, readFile, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { homedir, platform } from "node:os";
 import path from "node:path";
 
 import { parseCodexSessionJsonl } from "./parseCodexSession.js";
 
 export type SessionSummary = {
+  key: string;
   id: string;
   title: string;
   startedAt?: string;
@@ -133,6 +135,7 @@ async function summarizeSessionFile(
     const title = indexEntry?.thread_name || fallbackTitle(file.filePath, codexHome);
 
     return {
+      key: sessionKey(file.filePath),
       id,
       title,
       startedAt: parsed.metadata.timestamp,
@@ -147,6 +150,26 @@ async function summarizeSessionFile(
     warnings.push(`Could not read session transcript: ${file.filePath}`);
     return undefined;
   }
+}
+
+export async function readCodexSessionByKey(key: string, options: { codexHome?: string } = {}) {
+  const discovery = await discoverCodexSessions(options);
+  const summary = discovery.sessions.find((session) => session.key === key);
+
+  if (!summary) {
+    return undefined;
+  }
+
+  const content = await readFile(summary.filePath, "utf8");
+  return {
+    discovery,
+    summary,
+    document: parseCodexSessionJsonl(content)
+  };
+}
+
+function sessionKey(filePath: string): string {
+  return createHash("sha256").update(filePath).digest("base64url").slice(0, 16);
 }
 
 function fallbackTitle(filePath: string, codexHome: string): string {

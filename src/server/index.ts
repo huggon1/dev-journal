@@ -4,7 +4,7 @@ import { createServer, type ServerResponse } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { discoverCodexSessions } from "../codexSession/discovery.js";
+import { discoverCodexSessions, readCodexSessionByKey } from "../codexSession/discovery.js";
 
 const port = Number(process.env.PORT ?? 4174);
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -21,6 +21,23 @@ const server = createServer(async (request, response) => {
       sendJson(response, 500, {
         sessions: [],
         warnings: [error instanceof Error ? error.message : "Unknown discovery error"]
+      });
+    }
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/sessions/")) {
+    const key = decodeURIComponent(url.pathname.replace("/api/sessions/", ""));
+    try {
+      const result = await readCodexSessionByKey(key);
+      if (!result) {
+        sendJson(response, 404, { message: "Session not found" });
+        return;
+      }
+      sendJson(response, 200, result);
+    } catch (error) {
+      sendJson(response, 500, {
+        message: error instanceof Error ? error.message : "Unknown session read error"
       });
     }
     return;
