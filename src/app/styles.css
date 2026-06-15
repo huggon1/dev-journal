@@ -201,7 +201,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: min(360px, 42%);
+  width: 100%;
   min-width: 220px;
   padding: 9px 12px;
   border: 1px solid #d3ddd3;
@@ -216,6 +216,36 @@ h2 {
   outline: 0;
   background: transparent;
   color: #222622;
+}
+
+.search-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #657066;
+  font-size: 12px;
+}
+
+.search-actions button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #c9d3c9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #222622;
+}
+
+.search-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.search-controls {
+  display: grid;
+  gap: 8px;
+  width: min(360px, 42%);
+  min-width: 220px;
 }
 
 .review-subtitle {
@@ -240,6 +270,12 @@ h2 {
 
 .conversation-block.active .message-content {
   outline: 2px solid #4f7c5d;
+  outline-offset: 3px;
+}
+
+.conversation-block.search-active .message-content,
+.execution-detail.search-active {
+  outline: 2px solid #d49a33;
   outline-offset: 3px;
 }
 
@@ -282,6 +318,13 @@ h2 {
 .message-content p {
   margin: 10px 0 0;
   color: #222622;
+}
+
+.message-content mark {
+  border-radius: 4px;
+  background: #ffe6a8;
+  color: inherit;
+  padding: 0 2px;
 }
 
 .detail-stack {
@@ -439,5 +482,11 @@ h2 {
 
   .search-box {
     width: 100%;
+    min-width: 0;
+  }
+
+  .search-controls {
+    width: 100%;
+    min-width: 0;
   }
 }
